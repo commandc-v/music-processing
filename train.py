@@ -55,9 +55,9 @@ if __name__ == "__main__":
 
     # build model
     # currently using on this device cuda or cpu
-    if torch.cuda.is_available():
-        device = "cuda"
+    if torch.backends.mps.is_available():
+        device = "mps"
     else:
         device = "cpu"
-    print(f"Using{device} device")       
+    print(f"Using {device} device")       
     feed_forward_net = FeedForwardNet().to(device) 
