@@ -1,16 +1,21 @@
-# 1 - download dataset
-# 2 - create data loader
-# 3 - build model
-# 4 - train
-# 5 - save trained model
-
 import torch
 from torch import nn
 from torch.utils.data import DataLoader
 from torchvision import datasets
 from torchvision.transforms import ToTensor
 
+
+# 1- download dataset
+# 2- create data loader
+# 3- build model
+# 4- train
+# 5- save trained model
+
+
 BATCH_SIZE = 128
+EPOCHS = 10
+LEARNING_RATE = 0.001
+
 
 class FeedForwardNet(nn.Module):
 
@@ -18,71 +23,87 @@ class FeedForwardNet(nn.Module):
         super().__init__()
         self.flatten = nn.Flatten()
         self.dense_layers = nn.Sequential(
-            nn.Linear(28*28, 256),
+            nn.Linear(28 * 28, 256),
             nn.ReLU(),
             nn.Linear(256, 10)
         )
         self.softmax = nn.Softmax(dim=1)
 
     def forward(self, input_data):
-        flattened_data = self.flatten(input_data)
-        logits = self.dense_layers(flattened_data)
+        x = self.flatten(input_data)
+        logits = self.dense_layers(x)
         predictions = self.softmax(logits)
-        return predictions 
+        return predictions
 
 
 def download_mnist_datasets():
     train_data = datasets.MNIST(
-        root = "data",
-        download = True,
-        train = True,
-        transform = ToTensor()
+        root="data",
+        train=True,
+        download=True,
+        transform=ToTensor(),
     )
     validation_data = datasets.MNIST(
-        root = "data",
-        download = True,
-        train = False,
-        transform = ToTensor()
+        root="data",
+        train=False,
+        download=True,
+        transform=ToTensor(),
     )
     return train_data, validation_data
 
-def train_one_epoch(model, data_loader, loss_fn, optimiser, device):
-    for inputs, targets in data_loader:
-        inputs, targets = inputs.to(device), targets.to(device)
+
+def create_data_loader(train_data, batch_size):
+    train_dataloader = DataLoader(train_data, batch_size=batch_size)
+    return train_dataloader
+
+
+def train_single_epoch(model, data_loader, loss_fn, optimiser, device):
+    for input, target in data_loader:
+        input, target = input.to(device), target.to(device)
 
         # calculate loss
-        preditions = model(inputs)
-        loss = loss_fn(preditions, targets)
+        prediction = model(input)
+        loss = loss_fn(prediction, target)
 
-        # backpropagate loss and update weights
+        # backpropagate error and update weights
         optimiser.zero_grad()
         loss.backward()
         optimiser.step()
 
-    print(f"Loss: {loss.items()}")    
-
+    print(f"loss: {loss.item()}")
 
 
 def train(model, data_loader, loss_fn, optimiser, device, epochs):
     for i in range(epochs):
         print(f"Epoch {i+1}")
-        train_one_epoch(model, data_loader, loss_fn, optimiser, device)
-        print("-----------------------")
-    print("Training is done.")       
+        train_single_epoch(model, data_loader, loss_fn, optimiser, device)
+        print("---------------------------")
+    print("Finished training")
+
 
 if __name__ == "__main__":
-    # download MNIST dataset
+
+    # download data and create data loader
     train_data, _ = download_mnist_datasets()
-    print("MNIST dataset downloaded")
+    train_dataloader = create_data_loader(train_data, BATCH_SIZE)
 
-    # create a data loader for the train set
-    train_data_loader = DataLoader(train_data, batch_size = BATCH_SIZE)
-
-    # build model
-    # currently using on this device cuda or cpu
+    # construct model and assign it to device
     if torch.backends.mps.is_available():
         device = "mps"
     else:
         device = "cpu"
-    print(f"Using {device} device")       
-    feed_forward_net = FeedForwardNet().to(device) 
+    print(f"Using {device}")
+    feed_forward_net = FeedForwardNet().to(device)
+    print(feed_forward_net)
+
+    # initialise loss funtion + optimiser
+    loss_fn = nn.CrossEntropyLoss()
+    optimiser = torch.optim.Adam(feed_forward_net.parameters(),
+                                 lr=LEARNING_RATE)
+
+    # train model
+    train(feed_forward_net, train_dataloader, loss_fn, optimiser, device, EPOCHS)
+
+    # save model
+    torch.save(feed_forward_net.state_dict(), "feedforwardnet.pth")
+    print("Trained feed forward net saved at feedforwardnet.pth")
