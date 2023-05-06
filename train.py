@@ -3,6 +3,7 @@
 # 3 - build model
 # 4 - train
 # 5 - save trained model
+
 import torch
 from torch import nn
 from torch.utils.data import DataLoader
@@ -44,6 +45,30 @@ def download_mnist_datasets():
         transform = ToTensor()
     )
     return train_data, validation_data
+
+def train_one_epoch(model, data_loader, loss_fn, optimiser, device):
+    for inputs, targets in data_loader:
+        inputs, targets = inputs.to(device), targets.to(device)
+
+        # calculate loss
+        preditions = model(inputs)
+        loss = loss_fn(preditions, targets)
+
+        # backpropagate loss and update weights
+        optimiser.zero_grad()
+        loss.backward()
+        optimiser.step()
+
+    print(f"Loss: {loss.items()}")    
+
+
+
+def train(model, data_loader, loss_fn, optimiser, device, epochs):
+    for i in range(epochs):
+        print(f"Epoch {i+1}")
+        train_one_epoch(model, data_loader, loss_fn, optimiser, device)
+        print("-----------------------")
+    print("Training is done.")       
 
 if __name__ == "__main__":
     # download MNIST dataset
