@@ -52,3 +52,12 @@ if __name__ == "__main__":
 
     # create a data loader for the train set
     train_data_loader = DataLoader(train_data, batch_size = BATCH_SIZE)
+
+    # build model
+    # currently using on this device cuda or cpu
+    if torch.cuda.is_available():
+        device = "cuda"
+    else:
+        device = "cpu"
+    print(f"Using{device} device")       
+    feed_forward_net = FeedForwardNet().to(device) 
